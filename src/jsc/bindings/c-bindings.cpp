@@ -1110,6 +1110,12 @@ extern "C" uint64_t* Bun__getStandaloneModuleGraphELFVaddr()
 
 #endif // OS(DARWIN) / __linux__
 
+// Called by our mimalloc before main (compiled executables get deterministic address hints from their first allocation); a function because BUN_COMPILED is a local symbol in the final link.
+extern "C" __attribute__((visibility("default"), used)) int bun_is_compiled_executable(void)
+{
+    return BUN_COMPILED.size != 0;
+}
+
 #elif defined(_WIN32)
 // Windows PE section handling
 #include <windows.h>
@@ -1159,6 +1165,12 @@ extern "C" uint8_t* Bun__getStandaloneModuleGraphPEData()
 {
     if (!initializePESection()) return nullptr;
     return pe_section_data;
+}
+
+// No snapshots on Windows, and mimalloc may call this during its own initialization, so it answers without looking at the PE section.
+extern "C" int bun_is_compiled_executable(void)
+{
+    return 0;
 }
 
 #endif
