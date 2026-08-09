@@ -1,5 +1,4 @@
 import { expect, test } from "bun:test";
-import { existsSync, readdirSync } from "fs";
 import { bunEnv, bunExe, isLinux, isMacOS, tempDir } from "harness";
 import { join } from "path";
 
