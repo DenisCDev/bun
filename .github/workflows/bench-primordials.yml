@@ -34,8 +34,8 @@ jobs:
 
       - name: Build baseline (release)
         run: |
-          docker run --rm -v "$PWD:/root/bun" -w /root/bun ghcr.io/oven-sh/bun-development-docker-image \
-            bash -lc "bun install && bun run build:release"
+          docker run --rm --entrypoint /bin/bash -v "$PWD:/root/bun" -w /root/bun ghcr.io/oven-sh/bun-development-docker-image \
+            -lc "bun install && bun run build:release"
 
       - name: Bench baseline
         run: |
@@ -46,8 +46,8 @@ jobs:
       - name: Apply patch and rebuild
         run: |
           cp /tmp/primordials-patched.js src/js/internal/primordials.js
-          docker run --rm -v "$PWD:/root/bun" -w /root/bun ghcr.io/oven-sh/bun-development-docker-image \
-            bash -lc "bun run build:release"
+          docker run --rm --entrypoint /bin/bash -v "$PWD:/root/bun" -w /root/bun ghcr.io/oven-sh/bun-development-docker-image \
+            -lc "bun run build:release"
 
       - name: Bench patched
         run: |
