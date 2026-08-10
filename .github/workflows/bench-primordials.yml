@@ -1,0 +1,69 @@
+name: bench-primordials
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [ci-bench-primordials]
+
+jobs:
+  build-and-bench:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 3
+
+      - name: Pull development image
+        run: docker pull -q ghcr.io/oven-sh/bun-development-docker-image
+
+      - name: Stash patched primordials, restore baseline
+        run: |
+          git show HEAD~2:src/js/internal/primordials.js > /tmp/primordials-base.js
+          cp src/js/internal/primordials.js /tmp/primordials-patched.js
+          if cmp -s /tmp/primordials-base.js /tmp/primordials-patched.js; then
+            echo "ERROR: baseline and patched primordials are identical" >&2
+            exit 1
+          fi
+          cp /tmp/primordials-base.js src/js/internal/primordials.js
+
+      - name: Build baseline (release)
+        run: |
+          docker run --rm -v "$PWD:/root/bun" -w /root/bun ghcr.io/oven-sh/bun-development-docker-image \
+            bash -lc "bun install && bun run build:release"
+
+      - name: Bench baseline
+        run: |
+          ./build/release/bun --version
+          ./build/release/bun install --cwd bench
+          ./build/release/bun bench/snippets/util-format.mjs | tee bench-baseline.txt
+
+      - name: Apply patch and rebuild
+        run: |
+          cp /tmp/primordials-patched.js src/js/internal/primordials.js
+          docker run --rm -v "$PWD:/root/bun" -w /root/bun ghcr.io/oven-sh/bun-development-docker-image \
+            bash -lc "bun run build:release"
+
+      - name: Bench patched
+        run: |
+          ./build/release/bun bench/snippets/util-format.mjs | tee bench-patched.txt
+
+      - name: Run util/assert tests with patched release build
+        run: |
+          cd test
+          ../build/release/bun install
+          ../build/release/bun test js/node/util/ js/node/assert/ 2>&1 | tail -60
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-results
+          path: |
+            bench-baseline.txt
+            bench-patched.txt
