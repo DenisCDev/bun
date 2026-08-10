@@ -41,6 +41,9 @@ jobs:
       - name: Bench baseline
         run: |
           ./build/release/bun --version
+          # bench/bun.lock pins two tarballs to a private registry mirror; repoint
+          # them at npmjs.org (same paths, same integrity hashes) so install works.
+          sed -i 's|https://artifactory.infra.ant.dev:443/artifactory/api/npm/npm-all|https://registry.npmjs.org|g' bench/bun.lock
           ./build/release/bun install --cwd bench
           ./build/release/bun bench/snippets/util-format.mjs | tee bench-baseline.txt
 
