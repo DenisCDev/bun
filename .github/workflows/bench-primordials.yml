@@ -17,14 +17,15 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 3
+          fetch-depth: 10
 
       - name: Pull development image
         run: docker pull -q ghcr.io/oven-sh/bun-development-docker-image
 
       - name: Stash patched primordials, restore baseline
         run: |
-          git show HEAD~2:src/js/internal/primordials.js > /tmp/primordials-base.js
+          PATCH_COMMIT=$(git rev-list -n1 HEAD -- src/js/internal/primordials.js)
+          git show "$PATCH_COMMIT"^:src/js/internal/primordials.js > /tmp/primordials-base.js
           cp src/js/internal/primordials.js /tmp/primordials-patched.js
           if cmp -s /tmp/primordials-base.js /tmp/primordials-patched.js; then
             echo "ERROR: baseline and patched primordials are identical" >&2
